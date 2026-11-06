@@ -110,3 +110,28 @@ func TestCreateTextMessage(t *testing.T) {
 		t.Fatal("repository should be called")
 	}
 }
+
+func TestCreateRejectsNonMember(t *testing.T) {
+	repository := &mockMessageRepository{}
+	service := message.NewService(
+		repository,
+		&mockMembershipChecker{isMember: false},
+	)
+
+	_, err := service.Create(
+		context.Background(),
+		pgtype.UUID{},
+		pgtype.UUID{},
+		pgtype.UUID{},
+		"text",
+		"hello",
+	)
+
+	if err != message.ErrNotConversationMember {
+		t.Fatalf("expected membership error, got %v", err)
+	}
+
+	if repository.called {
+		t.Fatal("repository should not be called for non-member")
+	}
+}
