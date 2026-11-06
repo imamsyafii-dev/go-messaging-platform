@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/auth"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/config"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/handler"
@@ -34,6 +35,15 @@ func main() {
 
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository)
+	tokenService := auth.NewTokenService(
+		cfg.JWTSecret,
+		24*time.Hour,
+	)
+
+	authHandler := handler.NewAuthHandler(
+		userService,
+		tokenService,
+	)
 	userHandler := handler.NewUserHandler(userService)
 
 	addr := ":" + cfg.HTTPPort
@@ -41,7 +51,10 @@ func main() {
 
 	if err := http.ListenAndServe(
 		addr,
-		router.New(userHandler.Create),
+		router.New(
+			userHandler.Create,
+			authHandler.Login,
+		),
 	); err != nil {
 		log.Fatal(err)
 	}

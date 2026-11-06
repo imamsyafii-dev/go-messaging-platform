@@ -6,7 +6,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func New(userHandler http.HandlerFunc) http.Handler {
+func New(
+	userHandler http.HandlerFunc,
+	loginHandler http.HandlerFunc,
+) http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -17,6 +20,9 @@ func New(userHandler http.HandlerFunc) http.Handler {
 
 	if userHandler != nil {
 		r.Post("/users", userHandler)
+	}
+	if loginHandler != nil {
+		r.Post("/login", loginHandler)
 	}
 
 	return r
