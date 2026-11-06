@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrUserAlreadyExists = errors.New("user already exists")
 
 type UserRepository interface {
@@ -21,6 +22,10 @@ type UserRepository interface {
 		passwordHash string,
 		username string,
 		displayName string,
+	) (sqlc.User, error)
+	GetByEmail(
+		ctx context.Context,
+		email string,
 	) (sqlc.User, error)
 }
 
@@ -67,6 +72,26 @@ func (s *Service) CreateUser(
 		}
 
 		return sqlc.User{}, fmt.Errorf("create user: %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *Service) Authenticate(
+	ctx context.Context,
+	email string,
+	password string,
+) (sqlc.User, error) {
+	user, err := s.repository.GetByEmail(ctx, email)
+	if err != nil {
+		return sqlc.User{}, ErrInvalidCredentials
+	}
+
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.PasswordHash),
+		[]byte(password),
+	); err != nil {
+		return sqlc.User{}, ErrInvalidCredentials
 	}
 
 	return user, nil
