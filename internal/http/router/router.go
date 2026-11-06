@@ -12,6 +12,7 @@ func New(
 	userHandler http.HandlerFunc,
 	loginHandler http.HandlerFunc,
 	meHandler http.HandlerFunc,
+	conversationHandler http.HandlerFunc,
 	tokenService *auth.TokenService,
 ) http.Handler {
 	r := chi.NewRouter()
@@ -30,6 +31,10 @@ func New(
 	}
 	if meHandler != nil {
 		r.With(middleware.RequireAuth(tokenService)).Get("/me", meHandler)
+	}
+	if conversationHandler != nil {
+		r.With(middleware.RequireAuth(tokenService)).
+			Post("/conversations", conversationHandler)
 	}
 
 	return r

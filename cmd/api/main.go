@@ -8,6 +8,7 @@ import (
 
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/auth"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/config"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/conversation"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/handler"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/router"
@@ -35,6 +36,9 @@ func main() {
 
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository)
+	conversationRepository := conversation.NewRepository(db)
+	conversationService := conversation.NewService(conversationRepository)
+	conversationHandler := handler.NewConversationHandler(conversationService)
 	tokenService := auth.NewTokenService(
 		cfg.JWTSecret,
 		24*time.Hour,
@@ -55,6 +59,7 @@ func main() {
 			userHandler.Create,
 			authHandler.Login,
 			userHandler.Me,
+			conversationHandler.Create,
 			tokenService,
 		),
 	); err != nil {
