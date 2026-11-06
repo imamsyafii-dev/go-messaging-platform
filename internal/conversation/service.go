@@ -16,19 +16,12 @@ var (
 )
 
 type ConversationRepository interface {
-	Create(
+	CreateWithOwner(
 		ctx context.Context,
 		conversationType string,
 		name pgtype.Text,
 		createdBy pgtype.UUID,
 	) (sqlc.Conversation, error)
-
-	AddMember(
-		ctx context.Context,
-		conversationID pgtype.UUID,
-		userID pgtype.UUID,
-		role string,
-	) (sqlc.ConversationMember, error)
 }
 
 type Service struct {
@@ -59,24 +52,14 @@ func (s *Service) Create(
 		String: name,
 		Valid:  name != "",
 	}
-
-	conversation, err := s.repository.Create(
+	conversation, err := s.repository.CreateWithOwner(
 		ctx,
 		conversationType,
 		conversationName,
 		createdBy,
 	)
 	if err != nil {
-		return sqlc.Conversation{}, fmt.Errorf("create conversation: %w", err)
-	}
-
-	if _, err := s.repository.AddMember(
-		ctx,
-		conversation.ID,
-		createdBy,
-		"admin",
-	); err != nil {
-		return sqlc.Conversation{}, fmt.Errorf("add conversation creator: %w", err)
+		return sqlc.Conversation{}, fmt.Errorf("create conversation with owner: %w", err)
 	}
 
 	return conversation, nil
