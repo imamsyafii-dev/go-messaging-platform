@@ -69,6 +69,7 @@ func main() {
 			userHandler.Me,
 			conversationHandler.Create,
 			messageHandler.Create,
+			messageHandler.List,
 			tokenService,
 		),
 	); err != nil {

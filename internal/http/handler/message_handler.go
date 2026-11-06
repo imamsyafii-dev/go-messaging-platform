@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -24,10 +26,30 @@ type MessageService interface {
 		messageType string,
 		content string,
 	) (sqlc.Message, error)
+
+	List(
+		ctx context.Context,
+		conversationID pgtype.UUID,
+		userID pgtype.UUID,
+		limit int32,
+	) ([]sqlc.Message, error)
+
+	ListBefore(
+		ctx context.Context,
+		conversationID pgtype.UUID,
+		userID pgtype.UUID,
+		cursorCreatedAt pgtype.Timestamptz,
+		cursorID pgtype.UUID,
+		limit int32,
+	) ([]sqlc.Message, error)
 }
 
 type MessageHandler struct {
 	service MessageService
+}
+
+type messageHistoryResponse struct {
+	Messages []messageResponse `json:"messages"`
 }
 
 func NewMessageHandler(service MessageService) *MessageHandler {
@@ -118,5 +140,103 @@ func (h *MessageHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (h *MessageHandler) List(w http.ResponseWriter, r *http.Request) {
+	conversationID, err := uuid.Parse(chi.URLParam(r, "conversationID"))
+	if err != nil {
+		http.Error(w, "invalid conversation ID", http.StatusBadRequest)
+		return
+	}
+
+	userIDString, ok := middleware.UserID(r.Context())
+	if !ok {
+		http.Error(w, "user identity not found", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := uuid.Parse(userIDString)
+	if err != nil {
+		http.Error(w, "invalid user identity", http.StatusUnauthorized)
+		return
+	}
+
+	limit := int32(50)
+	if value := r.URL.Query().Get("limit"); value != "" {
+		parsedLimit, parseErr := strconv.ParseInt(value, 10, 32)
+		if parseErr != nil {
+			http.Error(w, "invalid limit", http.StatusBadRequest)
+			return
+		}
+		limit = int32(parsedLimit)
+	}
+
+	var messages []sqlc.Message
+
+	cursorCreatedAt := r.URL.Query().Get("cursor_created_at")
+	cursorID := r.URL.Query().Get("cursor_id")
+
+	if cursorCreatedAt == "" && cursorID == "" {
+		messages, err = h.service.List(
+			r.Context(),
+			pgtype.UUID{Bytes: conversationID, Valid: true},
+			pgtype.UUID{Bytes: userID, Valid: true},
+			limit,
+		)
+	} else {
+		if cursorCreatedAt == "" || cursorID == "" {
+			http.Error(w, "both cursor fields are required", http.StatusBadRequest)
+			return
+		}
+
+		parsedTime, parseErr := time.Parse(time.RFC3339Nano, cursorCreatedAt)
+		if parseErr != nil {
+			http.Error(w, "invalid cursor_created_at", http.StatusBadRequest)
+			return
+		}
+
+		parsedCursorID, parseErr := uuid.Parse(cursorID)
+		if parseErr != nil {
+			http.Error(w, "invalid cursor_id", http.StatusBadRequest)
+			return
+		}
+
+		messages, err = h.service.ListBefore(
+			r.Context(),
+			pgtype.UUID{Bytes: conversationID, Valid: true},
+			pgtype.UUID{Bytes: userID, Valid: true},
+			pgtype.Timestamptz{Time: parsedTime, Valid: true},
+			pgtype.UUID{Bytes: parsedCursorID, Valid: true},
+			limit,
+		)
+	}
+
+	if err != nil {
+		if errors.Is(err, message.ErrNotConversationMember) {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+
+		http.Error(w, "failed to list messages", http.StatusInternalServerError)
+		return
+	}
+
+	response := messageHistoryResponse{
+		Messages: make([]messageResponse, 0, len(messages)),
+	}
+
+	for _, currentMessage := range messages {
+		response.Messages = append(response.Messages, messageResponse{
+			ID:              currentMessage.ID.String(),
+			ConversationID:  currentMessage.ConversationID.String(),
+			SenderID:        currentMessage.SenderID.String(),
+			ClientMessageID: currentMessage.ClientMessageID.String(),
+			Type:            currentMessage.Type,
+			Content:         currentMessage.Content.String,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(response)
 }
