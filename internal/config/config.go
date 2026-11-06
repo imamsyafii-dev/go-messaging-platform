@@ -3,16 +3,30 @@ package config
 import "os"
 
 type Config struct {
-	HTTPPort string
+	HTTPPort   string
+	DBHost     string
+	DBPort     string
+	DBUser     string
+	DBPassword string
+	DBName     string
 }
 
 func Load() Config {
-	port := os.Getenv("HTTP_PORT")
-	if port == "" {
-		port = "8080"
+	return Config{
+		HTTPPort:   getEnv("HTTP_PORT", "8080"),
+		DBHost:     getEnv("DB_HOST", "localhost"),
+		DBPort:     getEnv("DB_PORT", "5434"),
+		DBUser:     getEnv("DB_USER", "messaging"),
+		DBPassword: getEnv("DB_PASSWORD", "messaging"),
+		DBName:     getEnv("DB_NAME", "messaging"),
+	}
+}
+
+func getEnv(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
 	}
 
-	return Config{
-		HTTPPort: port,
-	}
+	return value
 }
