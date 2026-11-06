@@ -3,10 +3,12 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database/sqlc"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/user"
 )
 
 type UserService interface {
@@ -66,7 +68,7 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.service.CreateUser(
+	createdUser, err := h.service.CreateUser(
 		r.Context(),
 		request.Email,
 		request.Password,
@@ -74,15 +76,20 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		request.DisplayName,
 	)
 	if err != nil {
+		if errors.Is(err, user.ErrUserAlreadyExists) {
+			http.Error(w, "email or username already exists", http.StatusConflict)
+			return
+		}
+
 		http.Error(w, "failed to create user", http.StatusInternalServerError)
 		return
 	}
 
 	response := userResponse{
-		ID:          user.ID.String(),
-		Email:       user.Email,
-		Username:    user.Username,
-		DisplayName: user.DisplayName,
+		ID:          createdUser.ID.String(),
+		Email:       createdUser.Email,
+		Username:    createdUser.Username,
+		DisplayName: createdUser.DisplayName,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

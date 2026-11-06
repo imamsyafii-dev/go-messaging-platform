@@ -2,12 +2,17 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database/sqlc"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+var ErrUserAlreadyExists = errors.New("user already exists")
 
 type UserRepository interface {
 	Create(
@@ -52,6 +57,15 @@ func (s *Service) CreateUser(
 		displayName,
 	)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return sqlc.User{}, ErrUserAlreadyExists
+		}
+
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return sqlc.User{}, ErrUserAlreadyExists
+		}
+
 		return sqlc.User{}, fmt.Errorf("create user: %w", err)
 	}
 
