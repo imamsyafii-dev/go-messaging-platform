@@ -128,6 +128,32 @@ func (q *Queries) IsConversationMember(ctx context.Context, arg IsConversationMe
 	return exists, err
 }
 
+const listConversationMemberIDs = `-- name: ListConversationMemberIDs :many
+SELECT user_id
+FROM conversation_members
+WHERE conversation_id = $1
+`
+
+func (q *Queries) ListConversationMemberIDs(ctx context.Context, conversationID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listConversationMemberIDs, conversationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var user_id pgtype.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listConversationMembers = `-- name: ListConversationMembers :many
 SELECT
     conversation_id,

@@ -110,3 +110,10 @@ func (r *Repository) IsMember(
 		UserID:         userID,
 	})
 }
+
+func (r *Repository) ListMemberIDs(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+) ([]pgtype.UUID, error) {
+	return r.queries.ListConversationMemberIDs(ctx, conversationID)
+}

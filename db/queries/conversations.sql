@@ -56,3 +56,8 @@ SELECT EXISTS (
     WHERE conversation_id = $1
       AND user_id = $2
 );
+
+-- name: ListConversationMemberIDs :many
+SELECT user_id
+FROM conversation_members
+WHERE conversation_id = $1;
