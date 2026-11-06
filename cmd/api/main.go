@@ -10,6 +10,7 @@ import (
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/handler"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/router"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/redis"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/user"
 )
 
@@ -24,6 +25,12 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+
+	redisClient, err := redis.Open(ctx, cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer redisClient.Close()
 
 	userRepository := user.NewRepository(db)
 	userService := user.NewService(userRepository)
