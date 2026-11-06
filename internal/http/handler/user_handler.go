@@ -7,8 +7,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database/sqlc"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/middleware"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/user"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type UserService interface {
@@ -19,6 +22,14 @@ type UserService interface {
 		username string,
 		displayName string,
 	) (sqlc.User, error)
+
+	GetByID(
+		ctx context.Context,
+		id pgtype.UUID,
+	) (sqlc.User, error)
+}
+type UserProfileService interface {
+	GetByID(ctx context.Context, id pgtype.UUID) (sqlc.User, error)
 }
 
 type UserHandler struct {
@@ -94,5 +105,41 @@ func (h *UserHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(response)
+}
+
+func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.UserID(r.Context())
+	if !ok {
+		http.Error(w, "user identity not found", http.StatusUnauthorized)
+		return
+	}
+
+	parsedID, err := uuid.Parse(userID)
+	if err != nil {
+		http.Error(w, "invalid user identity", http.StatusUnauthorized)
+		return
+	}
+
+	currentUser, err := h.service.GetByID(
+		r.Context(),
+		pgtype.UUID{
+			Bytes: parsedID,
+			Valid: true,
+		},
+	)
+	if err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+
+	response := userResponse{
+		ID:          currentUser.ID.String(),
+		Email:       currentUser.Email,
+		Username:    currentUser.Username,
+		DisplayName: currentUser.DisplayName,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(response)
 }

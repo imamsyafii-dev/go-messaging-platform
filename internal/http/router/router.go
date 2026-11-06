@@ -4,11 +4,15 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/auth"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/middleware"
 )
 
 func New(
 	userHandler http.HandlerFunc,
 	loginHandler http.HandlerFunc,
+	meHandler http.HandlerFunc,
+	tokenService *auth.TokenService,
 ) http.Handler {
 	r := chi.NewRouter()
 
@@ -23,6 +27,9 @@ func New(
 	}
 	if loginHandler != nil {
 		r.Post("/login", loginHandler)
+	}
+	if meHandler != nil {
+		r.With(middleware.RequireAuth(tokenService)).Get("/me", meHandler)
 	}
 
 	return r

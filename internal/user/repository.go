@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database/sqlc"
@@ -38,4 +39,11 @@ func (r *Repository) GetByEmail(
 	email string,
 ) (sqlc.User, error) {
 	return r.queries.GetUserByEmail(ctx, email)
+}
+
+func (r *Repository) GetByID(
+	ctx context.Context,
+	id pgtype.UUID,
+) (sqlc.User, error) {
+	return r.queries.GetUserByID(ctx, id)
 }

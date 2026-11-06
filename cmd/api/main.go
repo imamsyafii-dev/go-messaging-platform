@@ -54,6 +54,8 @@ func main() {
 		router.New(
 			userHandler.Create,
 			authHandler.Login,
+			userHandler.Me,
+			tokenService,
 		),
 	); err != nil {
 		log.Fatal(err)

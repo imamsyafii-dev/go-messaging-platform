@@ -10,6 +10,7 @@ import (
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
@@ -26,6 +27,10 @@ type UserRepository interface {
 	GetByEmail(
 		ctx context.Context,
 		email string,
+	) (sqlc.User, error)
+	GetByID(
+		ctx context.Context,
+		id pgtype.UUID,
 	) (sqlc.User, error)
 }
 
@@ -95,4 +100,11 @@ func (s *Service) Authenticate(
 	}
 
 	return user, nil
+}
+
+func (s *Service) GetByID(
+	ctx context.Context,
+	id pgtype.UUID,
+) (sqlc.User, error) {
+	return s.repository.GetByID(ctx, id)
 }
