@@ -60,6 +60,24 @@ func (m *mockMessageRepository) GetByClientID(
 	return sqlc.Message{}, nil
 }
 
+func (m *mockMessageRepository) List(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+	limit int32,
+) ([]sqlc.Message, error) {
+	return nil, nil
+}
+
+func (m *mockMessageRepository) ListBefore(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+	cursorCreatedAt pgtype.Timestamptz,
+	cursorID pgtype.UUID,
+	limit int32,
+) ([]sqlc.Message, error) {
+	return nil, nil
+}
+
 func TestCreateRejectsInvalidType(t *testing.T) {
 	repository := &mockMessageRepository{}
 	service := message.NewService(

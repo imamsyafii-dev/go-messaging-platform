@@ -40,6 +40,20 @@ type MessageRepository interface {
 		messageType string,
 		content pgtype.Text,
 	) (sqlc.Message, error)
+
+	ListBefore(
+		ctx context.Context,
+		conversationID pgtype.UUID,
+		cursorCreatedAt pgtype.Timestamptz,
+		cursorID pgtype.UUID,
+		limit int32,
+	) ([]sqlc.Message, error)
+
+	List(
+		ctx context.Context,
+		conversationID pgtype.UUID,
+		limit int32,
+	) ([]sqlc.Message, error)
 }
 
 type MembershipChecker interface {
@@ -114,4 +128,64 @@ func (s *Service) Create(
 	}
 
 	return message, nil
+}
+
+func (s *Service) ListBefore(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+	userID pgtype.UUID,
+	cursorCreatedAt pgtype.Timestamptz,
+	cursorID pgtype.UUID,
+	limit int32,
+) ([]sqlc.Message, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	isMember, err := s.membership.IsMember(
+		ctx,
+		conversationID,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("check conversation membership: %w", err)
+	}
+
+	if !isMember {
+		return nil, ErrNotConversationMember
+	}
+
+	return s.repository.ListBefore(
+		ctx,
+		conversationID,
+		cursorCreatedAt,
+		cursorID,
+		limit,
+	)
+}
+
+func (s *Service) List(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+	userID pgtype.UUID,
+	limit int32,
+) ([]sqlc.Message, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	isMember, err := s.membership.IsMember(
+		ctx,
+		conversationID,
+		userID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("check conversation membership: %w", err)
+	}
+
+	if !isMember {
+		return nil, ErrNotConversationMember
+	}
+
+	return s.repository.List(ctx, conversationID, limit)
 }
