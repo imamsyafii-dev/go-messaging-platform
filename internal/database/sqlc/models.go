@@ -8,6 +8,52 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type Attachment struct {
+	ID          pgtype.UUID        `json:"id"`
+	MessageID   pgtype.UUID        `json:"message_id"`
+	ObjectKey   string             `json:"object_key"`
+	FileName    string             `json:"file_name"`
+	ContentType string             `json:"content_type"`
+	FileSize    int64              `json:"file_size"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type Conversation struct {
+	ID        pgtype.UUID        `json:"id"`
+	Type      string             `json:"type"`
+	Name      pgtype.Text        `json:"name"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ConversationMember struct {
+	ConversationID    pgtype.UUID        `json:"conversation_id"`
+	UserID            pgtype.UUID        `json:"user_id"`
+	Role              string             `json:"role"`
+	JoinedAt          pgtype.Timestamptz `json:"joined_at"`
+	LastReadMessageID pgtype.UUID        `json:"last_read_message_id"`
+}
+
+type Message struct {
+	ID              pgtype.UUID        `json:"id"`
+	ConversationID  pgtype.UUID        `json:"conversation_id"`
+	SenderID        pgtype.UUID        `json:"sender_id"`
+	ClientMessageID pgtype.UUID        `json:"client_message_id"`
+	Type            string             `json:"type"`
+	Content         pgtype.Text        `json:"content"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type MessageReceipt struct {
+	MessageID   pgtype.UUID        `json:"message_id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	DeliveredAt pgtype.Timestamptz `json:"delivered_at"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+}
+
 type OutboxEvent struct {
 	ID            pgtype.UUID        `json:"id"`
 	AggregateType string             `json:"aggregate_type"`
