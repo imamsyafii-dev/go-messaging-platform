@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/coder/websocket"
@@ -63,8 +66,38 @@ func main() {
 	addr := ":" + getEnv("GATEWAY_PORT", "8081")
 	log.Printf("WebSocket gateway is listening on %s", addr)
 
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		log.Fatal(err)
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
+
+	server := &http.Server{
+		Addr:    addr,
+		Handler: nil,
+	}
+
+	go func() {
+		log.Printf("WebSocket gateway is listening on %s", addr)
+
+		if err := server.ListenAndServe(); err != nil &&
+			err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	<-ctx.Done()
+		log.Println("shutting down WebSocket gateway")
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("gateway shutdown error: %v", err)
 	}
 }
 
