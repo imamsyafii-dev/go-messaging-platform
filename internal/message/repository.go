@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database/sqlc"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/events"
 )
 
 type Repository struct {
@@ -95,15 +96,31 @@ func (r *Repository) CreateWithOutbox(
 		return sqlc.Message{}, err
 	}
 
-	payload, err := json.Marshal(map[string]any{
-		"id":                message.ID,
-		"conversation_id":   message.ConversationID,
-		"sender_id":         message.SenderID,
-		"client_message_id": message.ClientMessageID,
-		"type":              message.Type,
-		"content":           message.Content,
-		"created_at":        message.CreatedAt,
-	})
+	memberIDs, err := queries.ListConversationMemberIDs(
+		ctx,
+		message.ConversationID,
+	)
+	if err != nil {
+		return sqlc.Message{}, err
+	}
+
+	recipientIDs := make([]string, 0, len(memberIDs))
+	for _, memberID := range memberIDs {
+		recipientIDs = append(recipientIDs, memberID.String())
+	}
+
+	event := events.MessageCreated{
+		EventType:        "message.created",
+		MessageID:        message.ID.String(),
+		ConversationID:   message.ConversationID.String(),
+		SenderID:         message.SenderID.String(),
+		ClientMessageID:  message.ClientMessageID.String(),
+		MessageType:      message.Type,
+		Content:          message.Content.String,
+		RecipientUserIDs: recipientIDs,
+	}
+
+	payload, err := json.Marshal(event)
 	if err != nil {
 		return sqlc.Message{}, err
 	}
