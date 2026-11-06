@@ -98,6 +98,8 @@ func (h *MessageHandler) Create(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, message.ErrInvalidMessageType),
 			errors.Is(err, message.ErrEmptyMessage):
 			http.Error(w, err.Error(), http.StatusBadRequest)
+		case errors.Is(err, message.ErrNotConversationMember):
+			http.Error(w, err.Error(), http.StatusForbidden)
 		default:
 			http.Error(w, "failed to create message", http.StatusInternalServerError)
 		}

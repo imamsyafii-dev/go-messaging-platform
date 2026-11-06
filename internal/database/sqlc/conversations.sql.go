@@ -107,6 +107,27 @@ func (q *Queries) GetConversationByID(ctx context.Context, id pgtype.UUID) (Conv
 	return i, err
 }
 
+const isConversationMember = `-- name: IsConversationMember :one
+SELECT EXISTS (
+    SELECT 1
+    FROM conversation_members
+    WHERE conversation_id = $1
+      AND user_id = $2
+)
+`
+
+type IsConversationMemberParams struct {
+	ConversationID pgtype.UUID `json:"conversation_id"`
+	UserID         pgtype.UUID `json:"user_id"`
+}
+
+func (q *Queries) IsConversationMember(ctx context.Context, arg IsConversationMemberParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isConversationMember, arg.ConversationID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const listConversationMembers = `-- name: ListConversationMembers :many
 SELECT
     conversation_id,

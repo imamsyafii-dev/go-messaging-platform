@@ -48,3 +48,11 @@ SELECT
 FROM conversation_members
 WHERE conversation_id = $1
 ORDER BY joined_at ASC;
+
+-- name: IsConversationMember :one
+SELECT EXISTS (
+    SELECT 1
+    FROM conversation_members
+    WHERE conversation_id = $1
+      AND user_id = $2
+);

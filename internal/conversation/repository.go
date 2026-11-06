@@ -99,3 +99,14 @@ func (r *Repository) CreateWithOwner(
 
 	return conversation, nil
 }
+
+func (r *Repository) IsMember(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+	userID pgtype.UUID,
+) (bool, error) {
+	return r.queries.IsConversationMember(ctx, sqlc.IsConversationMemberParams{
+		ConversationID: conversationID,
+		UserID:         userID,
+	})
+}

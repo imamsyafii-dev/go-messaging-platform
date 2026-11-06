@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	ErrInvalidMessageType = errors.New("invalid message type")
-	ErrEmptyMessage       = errors.New("message content is required")
+	ErrInvalidMessageType    = errors.New("invalid message type")
+	ErrEmptyMessage          = errors.New("message content is required")
+	ErrNotConversationMember = errors.New("user is not a conversation member")
 )
 
 type MessageRepository interface {
@@ -41,13 +42,26 @@ type MessageRepository interface {
 	) (sqlc.Message, error)
 }
 
-type Service struct {
-	repository MessageRepository
+type MembershipChecker interface {
+	IsMember(
+		ctx context.Context,
+		conversationID pgtype.UUID,
+		userID pgtype.UUID,
+	) (bool, error)
 }
 
-func NewService(repository MessageRepository) *Service {
+type Service struct {
+	repository MessageRepository
+	membership MembershipChecker
+}
+
+func NewService(
+	repository MessageRepository,
+	membership MembershipChecker,
+) *Service {
 	return &Service{
 		repository: repository,
+		membership: membership,
 	}
 }
 
@@ -59,6 +73,19 @@ func (s *Service) Create(
 	messageType string,
 	content string,
 ) (sqlc.Message, error) {
+	isMember, err := s.membership.IsMember(
+		ctx,
+		conversationID,
+		senderID,
+	)
+	if err != nil {
+		return sqlc.Message{}, fmt.Errorf("check conversation membership: %w", err)
+	}
+
+	if !isMember {
+		return sqlc.Message{}, ErrNotConversationMember
+	}
+
 	if messageType != "text" &&
 		messageType != "image" &&
 		messageType != "file" {

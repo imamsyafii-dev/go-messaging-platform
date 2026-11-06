@@ -52,7 +52,10 @@ func main() {
 	userHandler := handler.NewUserHandler(userService)
 
 	messageRepository := message.NewRepository(db)
-	messageService := message.NewService(messageRepository)
+	messageService := message.NewService(
+		messageRepository,
+		conversationRepository,
+	)
 	messageHandler := handler.NewMessageHandler(messageService)
 
 	addr := ":" + cfg.HTTPPort

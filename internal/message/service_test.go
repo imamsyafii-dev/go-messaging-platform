@@ -13,6 +13,17 @@ import (
 type mockMessageRepository struct {
 	called bool
 }
+type mockMembershipChecker struct {
+	isMember bool
+}
+
+func (m *mockMembershipChecker) IsMember(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+	userID pgtype.UUID,
+) (bool, error) {
+	return m.isMember, nil
+}
 
 func (m *mockMessageRepository) Create(
 	ctx context.Context,
@@ -51,7 +62,10 @@ func (m *mockMessageRepository) GetByClientID(
 
 func TestCreateRejectsInvalidType(t *testing.T) {
 	repository := &mockMessageRepository{}
-	service := message.NewService(repository)
+	service := message.NewService(
+		repository,
+		&mockMembershipChecker{isMember: true},
+	)
 
 	_, err := service.Create(
 		context.Background(),
@@ -73,7 +87,11 @@ func TestCreateRejectsInvalidType(t *testing.T) {
 
 func TestCreateTextMessage(t *testing.T) {
 	repository := &mockMessageRepository{}
-	service := message.NewService(repository)
+
+	service := message.NewService(
+		repository,
+		&mockMembershipChecker{isMember: true},
+	)
 
 	_, err := service.Create(
 		context.Background(),
