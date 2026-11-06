@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"sync"
 
 	"github.com/coder/websocket"
@@ -52,4 +53,20 @@ func (h *Hub) Connections(userID string) []*websocket.Conn {
 	}
 
 	return result
+}
+
+func (h *Hub) SendToUser(
+	ctx context.Context,
+	userID string,
+	messageType websocket.MessageType,
+	data []byte,
+) {
+	for _, conn := range h.Connections(userID) {
+		if err := conn.Write(ctx, messageType, data); err != nil {
+			_ = conn.Close(
+				websocket.StatusInternalError,
+				"failed to deliver message",
+			)
+		}
+	}
 }
