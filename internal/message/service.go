@@ -30,6 +30,15 @@ type MessageRepository interface {
 		senderID pgtype.UUID,
 		clientMessageID pgtype.UUID,
 	) (sqlc.Message, error)
+
+	CreateWithOutbox(
+		ctx context.Context,
+		conversationID pgtype.UUID,
+		senderID pgtype.UUID,
+		clientMessageID pgtype.UUID,
+		messageType string,
+		content pgtype.Text,
+	) (sqlc.Message, error)
 }
 
 type Service struct {
@@ -65,7 +74,7 @@ func (s *Service) Create(
 		Valid:  content != "",
 	}
 
-	message, err := s.repository.Create(
+	message, err := s.repository.CreateWithOutbox(
 		ctx,
 		conversationID,
 		senderID,
