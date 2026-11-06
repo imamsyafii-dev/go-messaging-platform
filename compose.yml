@@ -31,6 +31,28 @@ services:
       timeout: 5s
       retries: 10
 
+  outbox-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: outbox-worker
+    container_name: go-messaging-platform-outbox-worker
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: messaging
+      DB_PASSWORD: messaging
+      DB_NAME: messaging
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:
