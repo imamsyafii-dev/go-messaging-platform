@@ -8,7 +8,9 @@ import (
 
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/config"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/handler"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/router"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/user"
 )
 
 func main() {
@@ -23,10 +25,17 @@ func main() {
 	}
 	defer db.Close()
 
+	userRepository := user.NewRepository(db)
+	userService := user.NewService(userRepository)
+	userHandler := handler.NewUserHandler(userService)
+
 	addr := ":" + cfg.HTTPPort
 	log.Printf("API server is listening on %s", addr)
 
-	if err := http.ListenAndServe(addr, router.New()); err != nil {
+	if err := http.ListenAndServe(
+		addr,
+		router.New(userHandler.Create),
+	); err != nil {
 		log.Fatal(err)
 	}
 }

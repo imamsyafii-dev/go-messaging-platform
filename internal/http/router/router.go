@@ -6,7 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func New() http.Handler {
+func New(userHandler http.HandlerFunc) http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -14,6 +14,10 @@ func New() http.Handler {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	if userHandler != nil {
+		r.Post("/users", userHandler)
+	}
 
 	return r
 }
