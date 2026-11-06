@@ -124,3 +124,18 @@ func (r *Repository) CreateWithOutbox(
 
 	return message, nil
 }
+
+func (r *Repository) ListBefore(
+	ctx context.Context,
+	conversationID pgtype.UUID,
+	cursorCreatedAt pgtype.Timestamptz,
+	cursorID pgtype.UUID,
+	limit int32,
+) ([]sqlc.Message, error) {
+	return r.queries.ListMessagesBefore(ctx, sqlc.ListMessagesBeforeParams{
+		ConversationID: conversationID,
+		CreatedAt:      cursorCreatedAt,
+		ID:             cursorID,
+		Limit:          limit,
+	})
+}

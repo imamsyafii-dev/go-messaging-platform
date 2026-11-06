@@ -184,3 +184,66 @@ func (q *Queries) ListMessages(ctx context.Context, arg ListMessagesParams) ([]M
 	}
 	return items, nil
 }
+
+const listMessagesBefore = `-- name: ListMessagesBefore :many
+SELECT
+    id,
+    conversation_id,
+    sender_id,
+    client_message_id,
+    type,
+    content,
+    created_at,
+    updated_at,
+    deleted_at
+FROM messages
+WHERE conversation_id = $1
+  AND (
+      created_at < $2
+      OR (created_at = $2 AND id < $3)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT $4
+`
+
+type ListMessagesBeforeParams struct {
+	ConversationID pgtype.UUID        `json:"conversation_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ID             pgtype.UUID        `json:"id"`
+	Limit          int32              `json:"limit"`
+}
+
+func (q *Queries) ListMessagesBefore(ctx context.Context, arg ListMessagesBeforeParams) ([]Message, error) {
+	rows, err := q.db.Query(ctx, listMessagesBefore,
+		arg.ConversationID,
+		arg.CreatedAt,
+		arg.ID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Message
+	for rows.Next() {
+		var i Message
+		if err := rows.Scan(
+			&i.ID,
+			&i.ConversationID,
+			&i.SenderID,
+			&i.ClientMessageID,
+			&i.Type,
+			&i.Content,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
