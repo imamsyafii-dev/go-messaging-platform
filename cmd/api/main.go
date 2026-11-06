@@ -12,6 +12,7 @@ import (
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/database"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/handler"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/http/router"
+	"github.com/imamsyafii-dev/go-messaging-platform/internal/message"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/redis"
 	"github.com/imamsyafii-dev/go-messaging-platform/internal/user"
 )
@@ -50,6 +51,10 @@ func main() {
 	)
 	userHandler := handler.NewUserHandler(userService)
 
+	messageRepository := message.NewRepository(db)
+	messageService := message.NewService(messageRepository)
+	messageHandler := handler.NewMessageHandler(messageService)
+
 	addr := ":" + cfg.HTTPPort
 	log.Printf("API server is listening on %s", addr)
 
@@ -60,6 +65,7 @@ func main() {
 			authHandler.Login,
 			userHandler.Me,
 			conversationHandler.Create,
+			messageHandler.Create,
 			tokenService,
 		),
 	); err != nil {
